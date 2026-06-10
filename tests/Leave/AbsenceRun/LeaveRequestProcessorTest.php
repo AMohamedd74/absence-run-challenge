@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service;
+namespace App\Tests\Leave\AbsenceRun;
 
 use App\Entity\Employee;
 use App\Entity\LeaveBalance;
@@ -60,6 +60,22 @@ final class LeaveRequestProcessorTest extends AbsenceRunTestCase
         self::assertCount(1, $this->hrApi->calls);
         self::assertSame('approved', $this->hrApi->calls[0]['decision']['decision']);
         self::assertSame(5.0, $this->hrApi->calls[0]['decision']['days']);
+    }
+
+    public function testVacationsSharingOnlyAWeekendDoNotConflict(): void
+    {
+        // Fri→Sun and Sun→Tue share only Sunday — no common working day, so §10 must
+        // not reject the second (calendar ranges overlap, working days do not).
+        $employee = new Employee('Weekender', new \DateTimeImmutable('2018-01-01'), 5, 'BY', 28);
+        $balance = new LeaveBalance($employee, 2025, 0.0, null, 0.0);
+        $first = $this->vacation($employee, '2025-07-04', '2025-07-06');  // Fri–Sun
+        $second = $this->vacation($employee, '2025-07-06', '2025-07-08'); // Sun–Tue
+        $this->persist($employee, $balance, $first, $second);
+
+        $this->processor()->processPending(new \DateTimeImmutable('2025-04-15'));
+
+        self::assertSame(LeaveStatus::APPROVED, $first->getStatus());
+        self::assertSame(LeaveStatus::APPROVED, $second->getStatus(), 'shared weekend is not a working-day overlap');
     }
 
     private function vacation(Employee $employee, string $start, string $end): LeaveRequest

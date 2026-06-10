@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\LeaveRequestProcessor;
+use App\Leave\AbsenceRun\LeaveRequestProcessor;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -48,7 +48,7 @@ final class AbsenceRunCommand extends Command
 
         $summary = $this->processor->processPending($runDate);
 
-        if ([] === $summary) {
+        if ($summary === []) {
             $io->success('No pending requests to process.');
 
             return Command::SUCCESS;
