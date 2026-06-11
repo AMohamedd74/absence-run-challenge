@@ -28,9 +28,9 @@ final class LeaveRequestProcessorTest extends AbsenceRunTestCase
         $request = $this->vacation($employee, '2025-05-19', '2025-05-23');
         $this->persist($employee, $balance, $request);
 
-        $summary = $this->processor()->processPending(new \DateTimeImmutable('2025-04-15'));
+        $report = $this->processor()->processPending(new \DateTimeImmutable('2025-04-15'));
 
-        self::assertCount(1, $summary);
+        self::assertCount(1, $report->decisions);
         self::assertSame(LeaveStatus::APPROVED, $request->getStatus());
         self::assertSame(5.0, $balance->getUsedDays());
     }
@@ -76,6 +76,23 @@ final class LeaveRequestProcessorTest extends AbsenceRunTestCase
 
         self::assertSame(LeaveStatus::APPROVED, $first->getStatus());
         self::assertSame(LeaveStatus::APPROVED, $second->getStatus(), 'shared weekend is not a working-day overlap');
+    }
+
+    public function testAFailedRequestIsSkippedAndCounted(): void
+    {
+        // No LeaveBalance row → the run can't compute remaining → the request is
+        // logged and skipped (it stays pending, retried next run), and the report
+        // counts the skip — which the command turns into a non-zero exit code.
+        $employee = new Employee('No Balance', new \DateTimeImmutable('2018-01-01'), 5, 'BE', 28);
+        $request = $this->vacation($employee, '2025-05-19', '2025-05-23');
+        $this->persist($employee, $request); // deliberately no balance
+
+        $report = $this->processor()->processPending(new \DateTimeImmutable('2025-04-15'));
+
+        self::assertTrue($report->hasSkips());
+        self::assertSame(1, $report->skipped);
+        self::assertSame([], $report->decisions);
+        self::assertSame(LeaveStatus::PENDING, $request->getStatus(), 'left pending for retry');
     }
 
     private function vacation(Employee $employee, string $start, string $end): LeaveRequest

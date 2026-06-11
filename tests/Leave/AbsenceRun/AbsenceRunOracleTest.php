@@ -24,7 +24,7 @@ final class AbsenceRunOracleTest extends AbsenceRunTestCase
     {
         (new AppFixtures())->load($this->em);
 
-        $summary = $this->processor()->processPending(new \DateTimeImmutable(self::RUN_DATE));
+        $report = $this->processor()->processPending(new \DateTimeImmutable(self::RUN_DATE));
 
         // Final balances per employee.
         self::assertSame(26.5, $this->usedDays('Anna Becker'), 'carryover lapsed; only 04-28→30 approved (+2.5)');
@@ -49,7 +49,8 @@ final class AbsenceRunOracleTest extends AbsenceRunTestCase
         $decisions = array_map(static fn (array $c): string => $c['decision']['decision'], $this->hrApi->calls);
         self::assertSame(6, \count(array_filter($decisions, static fn (string $d): bool => 'approved' === $d)));
         self::assertSame(4, \count(array_filter($decisions, static fn (string $d): bool => 'rejected' === $d)));
-        self::assertCount(10, $summary);
+        self::assertCount(10, $report->decisions);
+        self::assertFalse($report->hasSkips(), 'every request decided cleanly, none skipped');
     }
 
     public function testReRunPostsNothingNewAndLeavesBalancesUnchanged(): void
@@ -64,10 +65,10 @@ final class AbsenceRunOracleTest extends AbsenceRunTestCase
             'Felix Wolf' => $this->usedDays('Felix Wolf'),
         ];
 
-        $secondSummary = $this->processor()->processPending(new \DateTimeImmutable(self::RUN_DATE));
+        $secondReport = $this->processor()->processPending(new \DateTimeImmutable(self::RUN_DATE));
 
         self::assertCount($callsAfterFirstRun, $this->hrApi->calls, 'no duplicate HR posts on re-run');
-        self::assertSame([], $secondSummary, 'nothing left pending');
+        self::assertTrue($secondReport->isEmpty(), 'nothing left pending, nothing skipped');
         foreach ($balancesAfterFirstRun as $name => $used) {
             self::assertSame($used, $this->usedDays($name), "balance unchanged for $name");
         }

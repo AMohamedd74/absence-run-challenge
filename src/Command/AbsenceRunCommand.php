@@ -46,22 +46,38 @@ final class AbsenceRunCommand extends Command
 
         $io->title(sprintf('Absence run — %s', $runDate->format('Y-m-d')));
 
-        $summary = $this->processor->processPending($runDate);
+        $report = $this->processor->processPending($runDate);
 
-        if ($summary === []) {
+        if ($report->isEmpty()) {
             $io->success('No pending requests to process.');
 
             return Command::SUCCESS;
         }
 
-        $io->table(
-            ['Request', 'Decision', 'Days'],
-            array_map(
-                static fn (array $row): array => [$row['request'], $row['status'], $row['days']],
-                $summary,
-            ),
-        );
-        $io->success(sprintf('Processed %d request(s).', \count($summary)));
+        if ([] !== $report->decisions) {
+            $io->table(
+                ['Request', 'Decision', 'Days'],
+                array_map(
+                    static fn (array $row): array => [$row['request'], $row['status'], $row['days']],
+                    $report->decisions,
+                ),
+            );
+        }
+
+        // A skipped request couldn't be processed (bad data, HR post failed, …); it
+        // stays pending and is retried next run. Surface it as a non-zero exit so the
+        // scheduler/monitoring notices, rather than reporting silent success.
+        if ($report->hasSkips()) {
+            $io->error(sprintf(
+                'Processed %d request(s); %d skipped — see logs.',
+                $report->decisionCount(),
+                $report->skipped,
+            ));
+
+            return Command::FAILURE;
+        }
+
+        $io->success(sprintf('Processed %d request(s).', $report->decisionCount()));
 
         return Command::SUCCESS;
     }

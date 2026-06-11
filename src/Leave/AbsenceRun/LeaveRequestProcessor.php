@@ -41,17 +41,20 @@ final class LeaveRequestProcessor
     ) {
     }
 
-    /**
-     * @return list<array{request: int, status: string, days: float, reason: string}>
-     */
-    public function processPending(\DateTimeImmutable $runDate): array
+    public function processPending(\DateTimeImmutable $runDate): RunReport
     {
-        $summary = [];
+        $decisions = [];
+        $skipped = 0;
 
         // §12 — reverse approvals whose request has since been cancelled.
         foreach ($this->decisions->findApprovedAwaitingReversal() as $approval) {
-            foreach ($this->reverse($approval, $runDate) as $row) {
-                $summary[] = $row;
+            try {
+                foreach ($this->reverse($approval, $runDate) as $row) {
+                    $decisions[] = $row;
+                }
+            } catch (\Throwable $e) {
+                $this->skip($e);
+                ++$skipped;
             }
         }
 
@@ -60,56 +63,54 @@ final class LeaveRequestProcessor
         [$sick, $other] = $this->partitionPending();
         foreach ([...$other, ...$sick] as $request) {
             try {
-                $summary[] = $this->decide($request, $runDate);
+                $decisions[] = $this->decide($request, $runDate);
             } catch (\Throwable $e) {
                 $this->skip($e);
+                ++$skipped;
             }
         }
 
-        return $summary;
+        return new RunReport($decisions, $skipped);
     }
 
     /**
      * Reverse one cancelled approval, cascading to any §9 sick credit it underpinned:
      * cancelling a vacation revokes the credit a sick-during-it request received,
-     * otherwise that credit would dangle and leave the balance below zero.
+     * otherwise that credit would dangle and leave the balance below zero. Throws on
+     * failure so the caller can count the skip.
      *
      * @return list<array{request: int, status: string, days: float, reason: string}>
      */
     private function reverse(Decision $approval, \DateTimeImmutable $runDate): array
     {
         $rows = [];
-        try {
-            $request = $approval->getRequest();
+        $request = $approval->getRequest();
 
-            $row = $this->recorder->recordReversal(
-                $request,
-                -$approval->getBalanceDelta(),
-                'cancelled after approval — credited back (§12)',
-                $runDate,
-            );
-            if (null !== $row) {
-                $rows[] = $row;
-            }
+        $row = $this->recorder->recordReversal(
+            $request,
+            -$approval->getBalanceDelta(),
+            'cancelled after approval — credited back (§12)',
+            $runDate,
+        );
+        if (null !== $row) {
+            $rows[] = $row;
+        }
 
-            if (LeaveType::VACATION === $request->getType()) {
-                foreach ($this->decisions->findActiveSickCredits($request->getEmployee()) as $credit) {
-                    if (!$this->rangesOverlap($credit->getRequest(), $request)) {
-                        continue;
-                    }
-                    $row = $this->recorder->recordReversal(
-                        $credit->getRequest(),
-                        -$credit->getBalanceDelta(),
-                        '§9 credit revoked — underlying vacation cancelled',
-                        $runDate,
-                    );
-                    if (null !== $row) {
-                        $rows[] = $row;
-                    }
+        if (LeaveType::VACATION === $request->getType()) {
+            foreach ($this->decisions->findActiveSickCredits($request->getEmployee()) as $credit) {
+                if (!$this->rangesOverlap($credit->getRequest(), $request)) {
+                    continue;
+                }
+                $row = $this->recorder->recordReversal(
+                    $credit->getRequest(),
+                    -$credit->getBalanceDelta(),
+                    '§9 credit revoked — underlying vacation cancelled',
+                    $runDate,
+                );
+                if (null !== $row) {
+                    $rows[] = $row;
                 }
             }
-        } catch (\Throwable $e) {
-            $this->skip($e);
         }
 
         return $rows;
