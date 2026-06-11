@@ -65,14 +65,20 @@ make run
 
 | Path | What it is |
 |------|------------|
-| `src/Entity/` | `Employee`, `LeaveRequest`, `LeaveBalance` |
-| `src/Service/LeaveRequestProcessor.php` | The processor — a deliberately naive first pass. **This is what you'll work on.** |
+| `src/Entity/` | `Employee`, `LeaveRequest`, `LeaveBalance`, `Decision` (the persisted decision/audit ledger) |
+| `src/Leave/AbsenceRun/` | The run: `LeaveRequestProcessor` (orchestration), `DecisionRecorder` (idempotent HR post + balance), `RunReport` |
+| `src/Leave/Decision/` | Per-type decision strategy: `*Evaluator`, `EvaluatorRegistry`, `LeaveRequestValidator`, `Evaluation` |
+| `src/Leave/Policy/` | The rule math: `HolidayCalendar`, `WorkingDayCounter`, `EntitlementCalculator`, `BalanceCalculator`, `OverlapChecker` |
 | `src/Command/AbsenceRunCommand.php` | The `app:absence:run` entry point |
-| `src/Hr/` | The HR API client (`HrApiClientInterface` + HTTP implementation) |
-| `src/DataFixtures/AppFixtures.php` | The seeded sample period |
+| `src/Hr/` | The HR API client (`HrApiClientInterface` + retrying HTTP implementation) |
+| `src/DataFixtures/` | `AppFixtures` (the seeded sample period) and `ScenarioFixtures` (edge-case catalogue, `--group=scenarios`) |
+| `migrations/` | Doctrine migration that builds the schema |
 | `mock-hr-api/server.php` | A standalone mock of the HR API (Bearer auth + idempotency) |
 | `docs/LEAVE_POLICY.md` | **The leave policy.** Read it carefully — it defines what "correct" means. |
-| `tests/` | A base test case + three passing happy-path tests |
+| `QUESTIONS.md` / `SPEC.md` | Clarifying questions/assumptions, and the spec (rules, edge cases, golden oracle) |
+| `tests/` | Unit tests (calculators), the seeded period as a golden oracle, scenario + sick-leave + cancellation suites |
+
+The original scaffold's naive `LeaveRequestProcessor` has been rebuilt into the `src/Leave/` packages above; run `make help` for the dev workflow.
 
 ## Configuration & secrets
 
