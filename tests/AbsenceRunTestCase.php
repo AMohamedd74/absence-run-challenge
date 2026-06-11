@@ -25,6 +25,7 @@ use App\Leave\Policy\OverlapChecker;
 use App\Leave\Policy\WorkingDayCounter;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
+use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -80,6 +81,7 @@ abstract class AbsenceRunTestCase extends KernelTestCase
             new LeaveRequestValidator(),
             $registry,
             $recorder,
+            new NullLogger(),
         );
     }
 

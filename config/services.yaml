@@ -33,3 +33,8 @@ services:
 
     # Let the processor depend on the interface; the real client satisfies it.
     App\Hr\HrApiClientInterface: '@App\Hr\HrApiClient'
+
+    # No logging stack is installed in this skeleton, so provide a no-op PSR-3
+    # logger. A real deployment would add monolog-bundle and this binding drops out.
+    Psr\Log\NullLogger: ~
+    Psr\Log\LoggerInterface: '@Psr\Log\NullLogger'

@@ -12,6 +12,7 @@ use App\Leave\Decision\EvaluatorRegistry;
 use App\Leave\Decision\LeaveRequestValidator;
 use App\Repository\DecisionRepository;
 use App\Repository\LeaveRequestRepository;
+use Psr\Log\LoggerInterface;
 
 /**
  * Orchestrates the absence run. It owns the *flow* only — what runs in what order
@@ -36,6 +37,7 @@ final class LeaveRequestProcessor
         private readonly LeaveRequestValidator $validator,
         private readonly EvaluatorRegistry $evaluators,
         private readonly DecisionRecorder $recorder,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -151,7 +153,6 @@ final class LeaveRequestProcessor
 
     private function skip(\Throwable $e): void
     {
-        // No PSR-3 logger is wired in this skeleton; surface the skip on stderr.
-        error_log(sprintf('absence-run: skipped a request: %s', $e->getMessage()));
+        $this->logger->warning('absence-run: skipped a request', ['error' => $e->getMessage()]);
     }
 }
