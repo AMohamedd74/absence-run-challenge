@@ -39,6 +39,28 @@ php bin/phpunit
 
 The sample period is the leave year **2025** with a run date of **2025-04-15**.
 
+### Or, with the Makefile
+
+`make help` lists every target. The common loop (targets pin `APP_ENV=dev`, so they
+always hit the working database, not the test one):
+
+```bash
+make setup          # composer install + create schema + seed the sample period
+make mock           # in a second terminal — the mock HR API (stays running)
+make fresh          # reset to a clean "pending" state and clear the HR ledger
+make run            # process the run (override the date: make run DATE=2025-05-01)
+make test           # the test suite
+make sql            # open a SQLite shell on the dev database
+```
+
+There is also an extra **edge-case catalogue** (sick-leave matrix, overlaps, an
+over-drawn leaver, bad data, …) that you can load and eyeball:
+
+```bash
+php bin/console doctrine:fixtures:load --group=scenarios
+make run
+```
+
 ## What's in the box
 
 | Path | What it is |
@@ -52,7 +74,16 @@ The sample period is the leave year **2025** with a run date of **2025-04-15**.
 | `docs/LEAVE_POLICY.md` | **The leave policy.** Read it carefully — it defines what "correct" means. |
 | `tests/` | A base test case + three passing happy-path tests |
 
-The HR API credentials and base URL are in `config/services.yaml`.
+## Configuration & secrets
+
+The HR API base URL and token come from the `HR_API_BASE_URL` / `HR_API_TOKEN`
+environment variables — `config/services.yaml` binds them with `%env(...)%`. The
+dev/mock defaults live in `.env.dev`; they're deliberately **not** in `.env`, so a
+non-dev environment that forgets to inject the real token fails loudly rather than
+silently using the mock. In **production**, the real `HR_API_TOKEN` (and
+`APP_SECRET`, `DATABASE_URL`) is injected via the platform's secret store as a real
+environment variable, which overrides the defaults — so no real credential is ever
+committed.
 
 ## What we'd like from you
 
