@@ -8,10 +8,11 @@ ENV      ?= dev
 HR_URL   := http://127.0.0.1:8081
 HR_TOKEN := demo-secret-token-7Qx2
 DATE     ?= 2025-04-15
+DB_FILE  := var/absence.sqlite
 CONSOLE  := APP_ENV=$(ENV) php bin/console
 
 .DEFAULT_GOAL := help
-.PHONY: help install setup setup-env db fresh mock run test hr-reset sql
+.PHONY: help install setup setup-env db migrate fresh mock run test hr-reset sql
 
 help: ## List the available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -28,10 +29,15 @@ setup-env: ## Persist the environment to .env.local (ENV=dev|test|prod, default 
 	@mv .env.local.tmp .env.local
 	@echo "Set APP_ENV=$(ENV) in .env.local"
 
-db: ## (Re)create the dev schema and load all fixtures → fresh "pending" state
-	$(CONSOLE) doctrine:schema:drop --force --quiet
-	$(CONSOLE) doctrine:schema:create --quiet
+db: ## Rebuild the dev DB from migrations and load fixtures → fresh "pending" state
+	# The dev DB is a SQLite file; deleting it and re-running migrations is the
+	# reliable reset (doctrine:database:drop is a no-op for this SQLite DSN).
+	rm -f $(DB_FILE)
+	$(CONSOLE) doctrine:migrations:migrate --no-interaction
 	$(CONSOLE) doctrine:fixtures:load --no-interaction
+
+migrate: ## Apply pending Doctrine migrations (no reseed)
+	$(CONSOLE) doctrine:migrations:migrate --no-interaction
 
 fresh: db hr-reset ## Reset DB to pending AND clear the HR ledger — ready for a clean run
 

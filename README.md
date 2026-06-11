@@ -19,8 +19,8 @@ local SQLite file.
 ```bash
 composer install
 
-# Create the database schema and load the sample period
-php bin/console doctrine:schema:create
+# Create the database schema (via migrations) and load the sample period
+php bin/console doctrine:migrations:migrate --no-interaction
 php bin/console doctrine:fixtures:load --no-interaction
 ```
 
