@@ -7,11 +7,12 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
-    # Credentials for the mock HR API. In a real deployment these would come from
-    # the environment / a secrets store — they are inlined here only to keep setup
-    # to a single `composer install`.
-    hr_api.base_url: 'http://127.0.0.1:8081'
-    hr_api.token: 'demo-secret-token-7Qx2'
+    # HR API connection, bound to environment variables. The dev/mock defaults live
+    # in .env (committed, non-secret); in production the platform injects the real
+    # HR_API_TOKEN as an env var (secret store / k8s secret / etc.), overriding it —
+    # so no real credential is ever committed. See SPEC.md "Secrets".
+    hr_api.base_url: '%env(HR_API_BASE_URL)%'
+    hr_api.token: '%env(HR_API_TOKEN)%'
 
 services:
     # default configuration for services in *this* file
