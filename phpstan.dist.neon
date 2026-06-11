@@ -1,0 +1,6 @@
+parameters:
+    level: 8
+    paths:
+        - src
+    # Tests are exercised by PHPUnit; static analysis targets production code,
+    # where it isn't fighting test-only idioms (assert()-based type narrowing, etc.).

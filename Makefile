@@ -12,7 +12,7 @@ DB_FILE  := var/absence.sqlite
 CONSOLE  := APP_ENV=$(ENV) php bin/console
 
 .DEFAULT_GOAL := help
-.PHONY: help install setup setup-env db migrate fresh mock run test hr-reset sql
+.PHONY: help install setup setup-env db migrate fresh mock run test stan ci hr-reset sql
 
 help: ## List the available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -53,6 +53,11 @@ hr-reset: ## Wipe the mock HR recorded decisions
 
 test: ## Run the test suite
 	php bin/phpunit
+
+stan: ## Run static analysis (PHPStan, level 8 on src/)
+	vendor/bin/phpstan analyse --no-progress
+
+ci: stan test ## Run everything CI runs (static analysis + tests)
 
 sql: ## Open a SQLite shell on the dev database
 	sqlite3 var/absence.sqlite
