@@ -13,7 +13,7 @@ and ask us anything.
 
 ## Setup
 
-You need PHP 8.2+ and Composer. No Docker, no database server — the app uses a
+You need PHP 8.4+ and Composer. No Docker, no database server — the app uses a
 local SQLite file.
 
 ```bash
