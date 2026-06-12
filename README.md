@@ -1,5 +1,7 @@
 # The Absence Run
 
+[![CI](https://github.com/AMohamedd74/absence-run-challenge/actions/workflows/ci.yml/badge.svg)](https://github.com/AMohamedd74/absence-run-challenge/actions/workflows/ci.yml)
+
 Employees request time off — vacation, sick days, and more. We need a script
 that processes the **pending** requests for a period: for each one, check the
 employee's remaining entitlement, decide **approve** or **reject**, update their
