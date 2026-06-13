@@ -65,6 +65,16 @@ _Things you'd want a real product owner to clarify before you commit to a design
     the approval), or is HR told about cancellations through another channel? The
     answer decides whether the idempotency key needs the decision qualifier.
 
+11. **Sick certificate threshold — what counts as the "period"?** EntgFG §5 requires
+    a certificate once incapacity exceeds 3 calendar days, but applied per request it
+    lets back-to-back 3-day notes slip through. I now measure it over the *continuous*
+    incapacity (merging overlapping/adjacent sick periods). Two sub-questions: (a) does
+    a non-working gap break continuity — i.e. is "sick Fri, then sick Mon" one period
+    or two? I currently treat any calendar gap (including a weekend) as a break; and
+    (b) for *frequent but non-contiguous* short absences, German employers can require
+    a certificate from day one — is there such a rule and threshold, or is that an
+    abuse-detection concern outside this run?
+
 ## Assumptions I'm making (until told otherwise)
 
 _The defaults you're picking so you can keep moving. State each one — if we disagree we'll tell you, and if we don't, your code shows your reasoning._
@@ -112,11 +122,14 @@ _The defaults you're picking so you can keep moving. State each one — if we di
   already-`APPROVED` VACATION — and only the overlapping working days. Every other
   SICK request (no certificate, or no overlap) is recorded with zero balance impact
   and no credit.
-- **SICK approval follows the certificate rule.** With `medicalCertificate = true`
-  → accepted (and §9 credit-back if it overlaps an approved vacation). Without one,
-  **≤ 3 calendar days → accepted** (zero impact), **> 3 calendar days → rejected**
-  (certificate required — German EntgFG §5). **UNPAID** is recorded as approved with
-  zero impact (Q8), until told what should make it rejectable.
+- **SICK approval follows the certificate rule, measured over the continuous
+  incapacity** (Q11). With `medicalCertificate = true` → accepted (and §9 credit-back
+  if it overlaps an approved vacation). Without one, the threshold applies to the
+  whole continuous period — a no-certificate request is accepted only if the
+  contiguous span of claimed sick days (this request merged with overlapping/adjacent
+  ones) is **≤ 3 calendar days**; beyond that → rejected (EntgFG §5). This stops
+  back-to-back 3-day notes from slipping through. **UNPAID** is recorded as approved
+  with zero impact (Q8), until told what should make it rejectable.
 - **Partial mid-run failure → per-request commit after a successful HR post.** The
   policy already requires re-runnability (no duplicate posts, no double-deduction);
   the mechanism is ours, not an open question. A failed post skips that one request

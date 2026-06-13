@@ -86,8 +86,9 @@ _From the policy + clarified assumptions. Grouped; each bullet is a test case._
 | Two VACATIONs sharing only a weekend/holiday | Not an overlap (overlap is measured in working days, not calendar dates) |
 | Pending VACATION overlaps a `CANCELLED`/`REJECTED` period | Not blocked |
 | SICK + certificate overlapping an approved VACATION | Accept; credit back the vacation's *consumption* over the overlap (≤ what it deducted, half-days included) |
-| SICK without certificate, ≤ 3 calendar days | Accept, zero impact |
-| SICK without certificate, > 3 calendar days | Reject (certificate required) |
+| SICK without certificate, continuous incapacity ≤ 3 calendar days | Accept, zero impact |
+| SICK without certificate, continuous incapacity > 3 calendar days | Reject (certificate required) |
+| Back-to-back SICK notes (adjacent/overlapping, no cert) | Merged into one period; rejected if the combined span > 3 days |
 | Consumed days exceed remaining balance | Reject whole request (no partial) |
 | Request approved in a prior run, now `CANCELLED` | Credit days back once; post `cancelled` to HR |
 | Cancelled VACATION that had a §9 sick credit | Reverse the vacation **and** revoke the dependent credit (balance returns to 0, not negative) |
@@ -160,4 +161,7 @@ idempotency/reversal design is settled.)
 - **Q3 / Q5** — part-time day counting (5 vs 3) and the two-phase sick ordering.
 - **Q6 / Q7** — carryover lapse keyed to run date vs leave date; null-expiry meaning.
 - **Q10** — whether cancellations are posted to HR (decides the key qualifier).
-- **Q8** — UNPAID rejection criteria (SICK now settled by the ≤3/>3-day rule above).
+- **Q8** — UNPAID rejection criteria.
+- **Q11** — sick certificate scope: does a non-working gap (e.g. a weekend) break a
+  continuous incapacity, and is there a "certificate from day one" rule for frequent
+  short absences? Today a calendar gap breaks continuity and frequency isn't tracked.

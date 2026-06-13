@@ -56,4 +56,25 @@ class LeaveRequestRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * SICK periods the employee has claimed and not withdrawn — every status except
+     * CANCELLED. Used to measure continuous incapacity for the certificate rule: a
+     * just-rejected sibling still counts (the days were claimed), so back-to-back
+     * short notes are judged as one period rather than each slipping through.
+     *
+     * @return list<LeaveRequest>
+     */
+    public function findClaimedSick(Employee $employee): array
+    {
+        return $this->createQueryBuilder('r')
+            ->andWhere('r.employee = :employee')
+            ->andWhere('r.type = :sick')
+            ->andWhere('r.status != :cancelled')
+            ->setParameter('employee', $employee)
+            ->setParameter('sick', LeaveType::SICK)
+            ->setParameter('cancelled', LeaveStatus::CANCELLED)
+            ->getQuery()
+            ->getResult();
+    }
 }

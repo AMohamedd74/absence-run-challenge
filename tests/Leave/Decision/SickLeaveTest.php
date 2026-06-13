@@ -40,6 +40,38 @@ final class SickLeaveTest extends AbsenceRunTestCase
         self::assertSame(10.0, $balance->getUsedDays());
     }
 
+    public function testBackToBackShortSickNeedsACertificate(): void
+    {
+        // Two adjacent 3-day notes (Mon–Wed then Thu–Fri) are one 5-day continuous
+        // incapacity, so the certificate rule applies — neither slips through.
+        $employee = new Employee('Serial', new \DateTimeImmutable('2018-01-01'), 5, 'BE', 28);
+        $balance = new LeaveBalance($employee, 2025, 0.0, null, 0.0);
+        $first = $this->sick($employee, '2025-05-19', '2025-05-21', certificate: false);  // Mon–Wed
+        $second = $this->sick($employee, '2025-05-22', '2025-05-23', certificate: false); // Thu–Fri (adjacent)
+        $this->persist($employee, $balance, $first, $second);
+
+        $this->processor()->processPending(new \DateTimeImmutable('2025-06-01'));
+
+        self::assertSame(LeaveStatus::REJECTED, $first->getStatus(), 'part of a 5-day continuous incapacity');
+        self::assertSame(LeaveStatus::REJECTED, $second->getStatus());
+    }
+
+    public function testSeparateShortSickPeriodsAreEachAccepted(): void
+    {
+        // Two 3-day notes weeks apart are distinct incapacities — each is within the
+        // threshold, so a certificate isn't required.
+        $employee = new Employee('Occasional', new \DateTimeImmutable('2018-01-01'), 5, 'BE', 28);
+        $balance = new LeaveBalance($employee, 2025, 0.0, null, 0.0);
+        $may = $this->sick($employee, '2025-05-19', '2025-05-21', certificate: false);
+        $june = $this->sick($employee, '2025-06-16', '2025-06-18', certificate: false);
+        $this->persist($employee, $balance, $may, $june);
+
+        $this->processor()->processPending(new \DateTimeImmutable('2025-07-01'));
+
+        self::assertSame(LeaveStatus::APPROVED, $may->getStatus());
+        self::assertSame(LeaveStatus::APPROVED, $june->getStatus());
+    }
+
     public function testSickDuringApprovedVacationCreditsBackOverlap(): void
     {
         $employee = new Employee('Dilan', new \DateTimeImmutable('2015-01-01'), 5, 'BY', 30);

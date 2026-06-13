@@ -69,7 +69,7 @@ abstract class AbsenceRunTestCase extends KernelTestCase
 
         $registry = new EvaluatorRegistry(
             new VacationEvaluator($overlaps, $balanceCalculator, $workingDays),
-            new SickEvaluator($overlaps),
+            new SickEvaluator($overlaps, $requests),
             new UnpaidEvaluator(),
             new SpecialEvaluator(),
         );
